@@ -6,8 +6,8 @@
 <title>Adventskalender</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<script id="kalender-daten" type="application/json">{"titel":"Amis Adventskalender ♥️","untertitel":"☃️ Jeden Tag ein Türchen ❄️","jahr":2026,"bilder":{}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<script id="kalender-daten" type="application/json">{"titel": "Amis Adventskalender ♥️", "untertitel": "☃️ Jeden Tag ein Türchen ❄️", "jahr": 2026, "bilder": {}, "texte": {}}</script>
 <script>
   const DATEN = JSON.parse(document.getElementById("kalender-daten").textContent);
   const CONFIG = {
@@ -15,6 +15,7 @@
     untertitel: DATEN.untertitel,
     jahr: DATEN.jahr,
     bildPfad: (tag) => (DATEN.bilder && DATEN.bilder[tag]) || "",
+    text: (tag) => (DATEN.texte && DATEN.texte[tag]) || "",
     reihenfolge: [7, 18, 3, 22, 12, 1, 15, 9, 24, 5, 20, 11, 2, 16, 13, 8, 21, 4, 19, 10, 6, 23, 14, 17],
     gesperrtText: (tage) => tage === 1 ? "Noch 1 Tag Geduld 🤍" : `Noch ${tage} Tage Geduld 🤍`
   };
@@ -179,23 +180,31 @@
     transition: opacity 0.35s ease;
   }
   .gross.sichtbar { opacity: 1; pointer-events: auto; }
-  .gross figure {
-    max-width: min(92vw, 640px);
-    transform: scale(0.85) translateY(16px);
+  .gross { overflow-y: auto; padding: 64px 18px 40px; justify-content: flex-start; }
+  @media (min-height: 700px) { .gross { justify-content: center; } }
+  .karte {
+    width: 100%; max-width: 560px; margin: auto;
+    background: var(--creme); color: #2a211b;
+    border-radius: 14px; padding: 14px 14px 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+    transform: scale(0.86) translateY(18px);
     transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   }
-  .gross.sichtbar figure { transform: scale(1) translateY(0); }
-  .gross img {
-    display: block; max-width: 100%; max-height: 78vh;
-    border-radius: 8px;
-    background: var(--creme);
-    padding: 10px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  .gross.sichtbar .karte { transform: scale(1) translateY(0); }
+  .karte-datum {
+    text-align: center; font-family: "Fraunces", Georgia, serif; font-weight: 600;
+    font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tuer-dunkel);
+    padding: 6px 0 12px;
   }
-  .gross figcaption {
-    text-align: center; margin-top: 16px;
-    font-family: "Fraunces", Georgia, serif; font-size: 18px; color: var(--creme);
+  .karte img {
+    display: block; width: 100%; height: auto; max-height: 62vh; object-fit: contain;
+    border-radius: 8px; background: #efe5d2;
   }
+  .karte-text {
+    font-family: "Caveat", "Segoe Print", cursive; font-size: 25px; line-height: 1.3;
+    white-space: pre-wrap; text-align: center; padding: 16px 8px 0; color: #3a2a20;
+  }
+  .karte.nur-text .karte-text { font-size: 28px; padding: 18px 10px 8px; }
   .schliessen {
     position: absolute; top: 16px; right: 16px;
     width: 44px; height: 44px; border-radius: 50%;
@@ -204,7 +213,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tuer, .gross, .gross figure, .dahinter img { transition: none; }
+    .tuer, .gross, .karte, .dahinter img { transition: none; }
     .feld.wackeln .tuer { animation: none; }
   }
 </style>
@@ -223,10 +232,11 @@
 
 <div class="gross" id="gross" aria-hidden="true">
   <button class="schliessen" id="schliessen" aria-label="Schließen">✕</button>
-  <figure>
+  <div class="karte" id="karte">
+    <div class="karte-datum" id="karteDatum"></div>
     <img id="grossBild" alt="">
-    <figcaption id="grossText"></figcaption>
-  </figure>
+    <div class="karte-text" id="karteText"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -271,6 +281,20 @@
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
 
+  function nurTextBild() {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400">
+      <rect width="300" height="400" fill="#f6eedf"/>
+      <g transform="translate(150 200)" stroke="#b23a32" stroke-width="7" stroke-linecap="round" fill="none">
+        <rect x="-70" y="-48" width="140" height="96" rx="8"/>
+        <path d="M-66 -42 L0 10 L66 -42"/>
+      </g>
+    </svg>`;
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+  function vorschauBild(tag) {
+    return CONFIG.bildPfad(tag) || (CONFIG.text(tag) ? nurTextBild() : platzhalter(tag));
+  }
+
   const farben = ["", "gruen", "creme", "", "gruen", "", "creme", "gruen"];
   const raster = document.getElementById("raster");
   const heuteTag = (new Date().getMonth() === 11 && new Date().getFullYear() === CONFIG.jahr) ? new Date().getDate() : null;
@@ -298,7 +322,7 @@
     img.onerror = () => { img.onerror = null; img.src = platzhalter(tag); };
 
     if (istFrei(tag) && geoeffnet.has(tag)) {
-      img.src = CONFIG.bildPfad(tag) || platzhalter(tag);
+      img.src = vorschauBild(tag);
       feld.classList.add("offen");
     }
 
@@ -327,19 +351,26 @@
       toast(CONFIG.gesperrtText(tageBis(tag)));
       return;
     }
-    if (feld.classList.contains("offen")) { gross(tag, img.src); return; }
+    if (feld.classList.contains("offen")) { gross(tag); return; }
 
-    if (!img.getAttribute("src")) img.src = CONFIG.bildPfad(tag) || platzhalter(tag);
+    if (!img.getAttribute("src")) img.src = vorschauBild(tag);
     feld.classList.add("offen");
     geoeffnet.add(tag);
     geoeffnetSpeichern(geoeffnet);
-    setTimeout(() => gross(tag, img.src), 1000);
+    setTimeout(() => gross(tag), 1000);
   }
 
   const grossEl = document.getElementById("gross");
-  function gross(tag, src) {
-    document.getElementById("grossBild").src = src;
-    document.getElementById("grossText").textContent = tag + ". Dezember";
+  function gross(tag) {
+    const bild = CONFIG.bildPfad(tag), text = CONFIG.text(tag);
+    const bildEl = document.getElementById("grossBild");
+    const textEl = document.getElementById("karteText");
+    document.getElementById("karteDatum").textContent = tag + ". Dezember";
+    if (bild || !text) { bildEl.src = bild || platzhalter(tag); bildEl.hidden = false; }
+    else { bildEl.removeAttribute("src"); bildEl.hidden = true; }
+    textEl.textContent = text; textEl.hidden = !text;
+    document.getElementById("karte").classList.toggle("nur-text", !bild && !!text);
+    grossEl.scrollTop = 0;
     grossEl.classList.add("sichtbar");
     grossEl.setAttribute("aria-hidden", "false");
   }
@@ -348,27 +379,63 @@
   grossEl.addEventListener("click", (e) => { if (e.target === grossEl) zu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
 
-  // Schneefall: große Flocken + viele kleine Flöckchen
+  // Schneefall: echte Schneekristalle + viele kleine Flöckchen
   const c = document.getElementById("schnee");
   const ctx = c.getContext("2d");
-  let flocken = [];
+  let flocken = [], sprites = [];
+
+  // Zeichnet einen sechsarmigen Schneekristall auf eine eigene kleine Leinwand
+  function kristall(px, variante) {
+    const k = document.createElement("canvas");
+    k.width = k.height = px;
+    const g = k.getContext("2d");
+    const r = px * 0.42;
+    g.translate(px / 2, px / 2);
+    g.strokeStyle = "#ffffff";
+    g.lineCap = "round";
+    g.lineWidth = Math.max(1, px * 0.045);
+    g.shadowColor = "rgba(255,255,255,0.8)";
+    g.shadowBlur = px * 0.08;
+    for (let i = 0; i < 6; i++) {
+      g.save();
+      g.rotate((Math.PI / 3) * i);
+      g.beginPath();
+      g.moveTo(0, 0); g.lineTo(0, -r);
+      const aeste = variante === 0 ? [0.45, 0.72] : variante === 1 ? [0.55] : [0.35, 0.6, 0.82];
+      aeste.forEach((pos, j) => {
+        const len = r * (variante === 1 ? 0.38 : 0.28 - j * 0.04);
+        g.moveTo(0, -r * pos); g.lineTo(-len * 0.8, -r * pos - len * 0.75);
+        g.moveTo(0, -r * pos); g.lineTo(len * 0.8, -r * pos - len * 0.75);
+      });
+      g.stroke();
+      g.restore();
+    }
+    if (variante === 1) { g.beginPath(); g.arc(0, 0, r * 0.14, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill(); }
+    return k;
+  }
+
   function flocke(dpr, klein, zufallY) {
+    const groesse = klein ? 0 : (Math.random() * 14 + 12) * dpr;
     return {
       x: Math.random() * c.width,
-      y: zufallY ? Math.random() * c.height : -10,
-      r: (klein ? Math.random() * 0.7 + 0.35 : Math.random() * 2.2 + 1.1) * dpr,
-      v: (klein ? Math.random() * 0.45 + 0.35 : Math.random() * 0.8 + 0.5) * dpr,
+      y: zufallY ? Math.random() * c.height : -30 * dpr,
+      r: klein ? (Math.random() * 0.8 + 0.4) * dpr : groesse,
+      v: (klein ? Math.random() * 0.45 + 0.35 : Math.random() * 0.6 + 0.45) * dpr,
       w: Math.random() * Math.PI * 2,
-      ws: Math.random() * 0.015 + 0.006,
-      a: klein ? Math.random() * 0.35 + 0.35 : Math.random() * 0.3 + 0.6,
+      ws: Math.random() * 0.012 + 0.005,
+      rot: Math.random() * Math.PI * 2,
+      rs: (Math.random() - 0.5) * 0.02,
+      sprite: Math.floor(Math.random() * 3),
+      a: klein ? Math.random() * 0.35 + 0.35 : Math.random() * 0.35 + 0.55,
       klein
     };
   }
   function groesse() {
     const dpr = devicePixelRatio || 1;
     c.width = innerWidth * dpr; c.height = innerHeight * dpr;
-    const gross = Math.min(110, Math.round(innerWidth / 9));
-    const klein = Math.min(260, Math.round(innerWidth / 3.5));
+    sprites = [0, 1, 2].map((v) => kristall(Math.round(64 * dpr), v));
+    const gross = Math.min(45, Math.round(innerWidth / 18));
+    const klein = Math.min(280, Math.round(innerWidth / 3.2));
     flocken = [];
     for (let i = 0; i < gross; i++) flocken.push(flocke(dpr, false, true));
     for (let i = 0; i < klein; i++) flocken.push(flocke(dpr, true, true));
@@ -377,11 +444,19 @@
     const dpr = devicePixelRatio || 1;
     ctx.clearRect(0, 0, c.width, c.height);
     for (const f of flocken) {
-      f.y += f.v; f.w += f.ws; f.x += Math.sin(f.w) * (f.klein ? 0.25 : 0.45) * dpr;
-      if (f.y > c.height + 5) Object.assign(f, flocke(dpr, f.klein, false));
+      f.y += f.v; f.w += f.ws; f.x += Math.sin(f.w) * (f.klein ? 0.25 : 0.5) * dpr;
+      if (f.y > c.height + 30 * dpr) Object.assign(f, flocke(dpr, f.klein, false));
       ctx.globalAlpha = f.a;
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
+      if (f.klein) {
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
+      } else {
+        f.rot += f.rs;
+        ctx.save();
+        ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+        ctx.drawImage(sprites[f.sprite], -f.r / 2, -f.r / 2, f.r, f.r);
+        ctx.restore();
+      }
     }
     ctx.globalAlpha = 1;
     requestAnimationFrame(schneien);
